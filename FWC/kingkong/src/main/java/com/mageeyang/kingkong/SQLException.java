@@ -9,11 +9,14 @@ package com.mageeyang.kingkong;
  */
 public class SQLException extends RuntimeException {
 
-    public SQLException(String str){
+    public SQLException() {
+    }
+
+    public SQLException(String str) {
         super(str);
     }
 
-    public SQLException(String str,Throwable throwable){
-        super(str,throwable);
+    public SQLException(String str, Throwable cause) {
+        super(str, cause);
     }
 }

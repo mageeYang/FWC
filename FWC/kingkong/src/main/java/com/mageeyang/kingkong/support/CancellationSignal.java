@@ -1,6 +1,7 @@
 package com.mageeyang.kingkong.support;
 
 import android.os.RemoteException;
+import android.util.*;
 
 /**
  * Provides the ability to cancel an operation in progress.
@@ -76,6 +77,99 @@ public class CancellationSignal {
         }
     }
 
+    /**
+     * Sets the cancellation listener to be called when canceled.
+     *
+     * This method is intended to be used by the recipient of a cancellation signal
+     * such as a database or a content provider to handle cancellation requests
+     * while performing a long-running operation.  This method is not intended to be
+     * used by applications themselves.
+     *
+     * If {@link CancellationSignal#cancel} has already been called, then the provided
+     * listener is invoked immediately.
+     *
+     * This method is guaranteed that the listener will not be called after it
+     * has been removed.
+     *
+     * @param listener The cancellation listener, or null to remove the current listener.
+     */
+    public void setOnCancelListener(OnCancelListener listener) {
+        synchronized (this) {
+            waitForCancelFinishedLocked();
+            if (mOnCancelListener == listener) {
+                return;
+            }
+            mOnCancelListener = listener;
+            if (!mIsCanceled || listener == null) {
+                return;
+            }
+        }
+        listener.onCancel();
+    }
+
+    /**
+     * Sets the remote transport.
+     *
+     * If {@link CancellationSignal#cancel} has already been called, then the provided
+     * remote transport is canceled immediately.
+     *
+     * This method is guaranteed that the remote transport will not be called after it
+     * has been removed.
+     *
+     * @param remote The remote transport, or null to remove.
+     *
+     * @hide
+     */
+    public void setRemote(ICancellationSignal remote) {
+        synchronized (this) {
+            waitForCancelFinishedLocked();
+            if (mRemote == remote) {
+                return;
+            }
+            mRemote = remote;
+            if (!mIsCanceled || remote == null) {
+                return;
+            }
+        }
+        try {
+            remote.cancel();
+        } catch (RemoteException ex) {
+        }
+    }
+    private void waitForCancelFinishedLocked() {
+        while (mCancelInProgress) {
+            try {
+                wait();
+            } catch (InterruptedException ex) {
+            }
+        }
+    }
+
+    /**
+     * Creates a transport that can be returned back to the caller of
+     * a Binder function and subsequently used to dispatch a cancellation signal.
+     *
+     * @return The new cancellation signal transport.
+     *
+     * @hide
+     */
+    public static ICancellationSignal createTransport() {
+        return new Transport();
+    }
+    /**
+     * Given a locally created transport, returns its associated cancellation signal.
+     *
+     * @param transport The locally created transport, or null if none.
+     * @return The associated cancellation signal, or null if none.
+     *
+     * @hide
+     */
+    public static CancellationSignal fromTransport(ICancellationSignal transport) {
+        if (transport instanceof Transport) {
+            return ((Transport)transport).mCancellationSignal;
+        }
+        return null;
+    }
 
     /**
      * Listens for cancellation.
@@ -94,6 +188,7 @@ public class CancellationSignal {
             mCancellationSignal.cancel();
         }
     }
+
 
 
 

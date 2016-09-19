@@ -8,6 +8,10 @@ package com.mageeyang.kingkong.database;
  * @description
  */
 public class SQLiteBindOrColumnIndexOutOfRangeException extends SQLiteException {
+
+    public SQLiteBindOrColumnIndexOutOfRangeException() {
+    }
+
     public SQLiteBindOrColumnIndexOutOfRangeException(String str) {
         super(str);
     }
